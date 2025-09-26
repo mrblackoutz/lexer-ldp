@@ -1,0 +1,34 @@
+prg Exemplo_Teste;
+var
+    int x, y;
+    float resultado;
+    char letra;
+
+subrot
+    int soma(int a, int b)
+    begin
+        return a + b;
+    end;
+
+begin
+    { Este é um comentário }
+    x <- 10;
+    y <- 20;
+    
+    write("Digite uma letra:");
+    read(letra);
+    
+    resultado <- 3.14;
+    
+    if (x > y) then
+        write("X é maior")
+    else
+        write("Y é maior ou igual");
+    
+    while (x < 100)
+    begin
+        x <- x + 1;
+    end;
+    
+    write("Soma:", soma(x, y));
+end.
