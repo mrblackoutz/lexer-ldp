@@ -1,0 +1,62 @@
+prg TesteComErros;
+
+var
+    int contador, @resultado;  { @ não é válido em identificador }
+    float pi, media#total;     { # não é válido em identificador }
+    char letra;
+
+subrot int calcular$valor(int x);  { $ não é válido }
+var
+    int temp;
+begin
+    temp <- x * 2;
+    
+    { Teste de float mal formado }
+    pi <- 3.;     { Faltando parte decimal }
+    
+    { String não terminada }
+    write("Esta string não tem fim
+    
+    { Caractere mal formado }
+    letra <- 'abc';  { Mais de um caractere }
+    letra <- '';     { Caractere vazio }
+    
+    return temp;
+end;
+
+{ Programa principal }
+begin
+    write("=== Teste de Erros Léxicos ===");
+    
+    contador <- 0;
+    
+    { Operador = sozinho }
+    if (contador = 10) then
+        write("Erro: deveria ser ==");
+    
+    { Operador ! sozinho }
+    if (! contador) then
+        write("Erro: deveria ser not");
+    
+    { Teste com números }
+    pi <- 3.14159;    { Correto }
+    pi <- 3.;         { Erro: falta parte decimal }
+    
+    { Teste de caractere }
+    letra <- 'A';     { Correto }
+    letra <- 'XY';    { Erro: mais de um caractere }
+    
+    { Teste de string }
+    write("String correta");
+    write("String não fechada
+    write("Outra string");
+    
+    { Caracteres inválidos }
+    contador <- contador @ 2;    { @ não é operador válido }
+    media#total <- 5.5;          { # no meio do identificador }
+    
+    { Comentário não fechado
+    contador <- contador + 1;
+    write("Fim do programa");
+    
+end.

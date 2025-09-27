@@ -1,0 +1,148 @@
+prg TesteLingLPD;
+
+var
+    { Declarações de variáveis simples }
+    int a, b, c;
+    float pi, euler, golden;
+    char letra, digito;
+    
+    { Arrays unidimensionais }
+    int numeros[100];
+    float temperaturas[30];
+    char palavra[50];
+    
+    { Arrays bidimensionais }
+    int matriz[10][10];
+    float tabela[5][5];
+
+{ Sub-rotina com retorno void }
+subrot void inicializar();
+begin
+    pi <- 3.14159;
+    euler <- 2.71828;
+    golden <- 1.61803;
+end;
+
+{ Sub-rotina com parâmetros e retorno }
+subrot int maximo(int x, int y);
+begin
+    if (x > y) then
+        return x;
+    else
+        return y;
+end;
+
+{ Sub-rotina recursiva }
+subrot int fibonacci(int n);
+begin
+    if (n <= 1) then
+        return n;
+    else
+        return fibonacci(n - 1) + fibonacci(n - 2);
+end;
+
+{ Programa principal }
+begin
+    { Inicialização }
+    inicializar();
+    
+    { Teste de operadores aritméticos }
+    a <- 10;
+    b <- 20;
+    c <- a + b;      { adição }
+    c <- b - a;      { subtração }
+    c <- a * b;      { multiplicação }
+    c <- b / a;      { divisão }
+    
+    { Teste de operadores relacionais }
+    if (a < b) then write("a menor que b");
+    if (a <= b) then write("a menor ou igual a b");
+    if (b > a) then write("b maior que a");
+    if (b >= a) then write("b maior ou igual a a");
+    if (a == a) then write("a igual a a");
+    if (a != b) then write("a diferente de b");
+    
+    { Teste de operadores lógicos }
+    if (a < b) and (b < 30) then
+        write("a < b < 30");
+    
+    if (a == 0) or (b == 20) then
+        write("a é 0 ou b é 20");
+    
+    if not (a == b) then
+        write("a não é igual a b");
+    
+    { Teste de estruturas de controle }
+    
+    { IF-THEN-ELSE }
+    if (a > 5) then
+    begin
+        write("a é maior que 5");
+        a <- a + 1;
+    end
+    else
+    begin
+        write("a é menor ou igual a 5");
+        a <- a - 1;
+    end;
+    
+    { WHILE }
+    c <- 0;
+    while (c < 5) do
+    begin
+        write("While: ");
+        write(c);
+        c <- c + 1;
+    end;
+    
+    { FOR }
+    for c <- 0 until 10 do
+    begin
+        numeros[c] <- c * c;
+        write("Quadrado de ");
+        write(c);
+        write(" = ");
+        write(numeros[c]);
+    end;
+    
+    { REPEAT-UNTIL }
+    c <- 10;
+    repeat
+        write("Repeat: ");
+        write(c);
+        c <- c - 1;
+    until (c == 0);
+    
+    { Teste de arrays }
+    for a <- 0 until 5 do
+        for b <- 0 until 5 do
+            matriz[a][b] <- a * 5 + b;
+    
+    { Teste de strings e caracteres }
+    letra <- 'A';
+    digito <- '9';
+    write("Letra: ");
+    write(letra);
+    write("Dígito: ");
+    write(digito);
+    
+    write("String de teste: ");
+    write("Hello, World!");
+    
+    { Teste de sub-rotinas }
+    c <- maximo(10, 20);
+    write("Máximo entre 10 e 20: ");
+    write(c);
+    
+    write("Fibonacci de 10: ");
+    c <- fibonacci(10);
+    write(c);
+    
+    { Teste de entrada }
+    write("Digite um número: ");
+    read(a);
+    write("Você digitou: ");
+    write(a);
+    
+    write("Programa concluído!");
+end.

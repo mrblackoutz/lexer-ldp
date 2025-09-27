@@ -1,0 +1,104 @@
+prg TesteCompleto;
+
+var
+    int contador, resultado;
+    float media, soma;
+    char opcao;
+    int vetor[10];
+
+{ Sub-rotina para calcular fatorial }
+subrot int fatorial(int n);
+var
+    int fat;
+begin
+    if (n <= 1) then
+        return 1;
+    else
+        fat <- n * fatorial(n - 1);
+        return fat;
+end;
+
+{ Sub-rotina com erro: @ não é válido }
+subrot void processar@dados(int x);
+begin
+    write("Processando: ");
+    write(x);
+end;
+
+{ Sub-rotina para calcular média }
+subrot float calcularMedia(int tam);
+var
+    int i;
+    float total;
+begin
+    total <- 0.0;
+    for i <- 0 until tam do
+        total <- total + vetor[i];
+    
+    { Erro: número float mal formado }
+    return total / tam.;
+end;
+
+{ Programa principal }
+begin
+    write("=== Sistema de Cálculos ===");
+    
+    { Inicialização de variáveis }
+    contador <- 0;
+    soma <- 0.0;
+    
+    { Menu de opções }
+    repeat
+        write("Escolha uma opção:");
+        write("1 - Calcular fatorial");
+        write("2 - Preencher vetor");
+        write("3 - Calcular média");
+        write("0 - Sair");
+        
+        read(opcao);
+        
+        if (opcao == '1') then
+        begin
+            write("Digite um número: ");
+            read(contador);
+            resultado <- fatorial(contador);
+            write("Fatorial: ");
+            write(resultado);
+        end
+        else if (opcao = '2') then  { Erro: deveria ser == }
+        begin
+            write("Preenchendo vetor...");
+            for contador <- 0 until 10 do
+            begin
+                write("Digite valor ");
+                write(contador);
+                write(": ");
+                read(vetor[contador]);
+            end;
+        end
+        else if (opcao == '3') then
+        begin
+            media <- calcularMedia(10);
+            write("Média dos valores: ");
+            write(media);
+        end
+        else if (opcao != '0') then
+        begin
+            { String não terminada }
+            write("Opção inválida!
+        end;
+        
+    until (opcao == '0');
+    
+    { Teste de operadores }
+    if (! contador) then  { Erro: deveria ser 'not' }
+        write("Contador zerado");
+    
+    { Caractere mal formado }
+    opcao <- 'xy';  { Erro: mais de um caractere }
+    
+    write("Programa finalizado!");
+    
+    { Comentário não fechado
+    Este é o fim do programa
+end.

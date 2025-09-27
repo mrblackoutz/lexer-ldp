@@ -1,0 +1,95 @@
+prg ExemploCorreto;
+
+var
+    int numero, i, resultado;
+    float x, y, distancia;
+    char continuar;
+    int matriz[5][5];
+
+{ Sub-rotina para calcular potência }
+subrot int potencia(int base, int exp);
+var
+    int pot, j;
+begin
+    pot <- 1;
+    for j <- 1 until exp do
+        pot <- pot * base;
+    return pot;
+end;
+
+{ Sub-rotina para calcular distância euclidiana }
+subrot float distanciaEuclidiana(float x1, float y1, float x2, float y2);
+var
+    float dx, dy;
+begin
+    dx <- x2 - x1;
+    dy <- y2 - y1;
+    return (dx * dx + dy * dy);  { Retorna quadrado da distância }
+end;
+
+{ Sub-rotina void para imprimir matriz }
+subrot void imprimirMatriz();
+var
+    int linha, coluna;
+begin
+    write("=== Matriz ===");
+    for linha <- 0 until 5 do
+    begin
+        for coluna <- 0 until 5 do
+        begin
+            write(matriz[linha][coluna]);
+            write(" ");
+        end;
+        write("");  { Nova linha }
+    end;
+end;
+
+{ Programa principal }
+begin
+    write("=== Programa de Demonstração ===");
+    
+    { Teste de potência }
+    write("Digite a base: ");
+    read(numero);
+    write("Digite o expoente: ");
+    read(i);
+    
+    resultado <- potencia(numero, i);
+    write("Resultado da potência: ");
+    write(resultado);
+    
+    { Teste de distância }
+    write("Digite x1: ");
+    read(x);
+    write("Digite y1: ");
+    read(y);
+    
+    distancia <- distanciaEuclidiana(0.0, 0.0, x, y);
+    write("Quadrado da distância até origem: ");
+    write(distancia);
+    
+    { Preenchimento da matriz }
+    for i <- 0 until 5 do
+        for numero <- 0 until 5 do
+            matriz[i][numero] <- i * 5 + numero;
+    
+    { Impressão da matriz }
+    imprimirMatriz();
+    
+    { Loop com menu }
+    continuar <- 'S';
+    while (continuar == 'S') or (continuar == 's') do
+    begin
+        write("Deseja continuar? (S/N): ");
+        read(continuar);
+        
+        if (continuar != 'S') and (continuar != 's') and 
+           (continuar != 'N') and (continuar != 'n') then
+        begin
+            write("Opção inválida! Use S ou N.");
+            continuar <- 'S';  { Força continuar para perguntar novamente }
+        end;
+    end;
+    
+    write("Programa finalizado com sucesso!");
+end.

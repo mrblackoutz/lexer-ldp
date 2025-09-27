@@ -50,18 +50,22 @@ static PalavraReservada palavras_reservadas[] = {
 // Função auxiliar para ler próximo caractere
 static void proximo_char(void) {
     if (fim_arquivo) {
+        // Já chegamos ao fim, portanto não há novos caracteres a serem lidos
         return;
     }
     
     int c = fgetc(arquivo_fonte);
     if (c == EOF) {
+        // Marca o fim do arquivo e zera o caractere atual para evitar leituras inválidas
         fim_arquivo = true;
         char_atual = '\0';
     } else {
+        // Converte o inteiro lido para char e atualiza a posição horizontal
         char_atual = (char)c;
         coluna_atual++;
         
         if (char_atual == '\n') {
+            // Sempre que encontrar uma quebra de linha, avança o contador de linhas
             linha_atual++;
             coluna_atual = 0;
         }
@@ -71,10 +75,17 @@ static void proximo_char(void) {
 // Função auxiliar para retroceder um caractere
 static void retroceder_char(void) {
     if (!fim_arquivo && char_atual != '\0') {
+        // Só retrocede se não estiver no fim do arquivo e se o caractere não for nulo
+        
         ungetc(char_atual, arquivo_fonte);
+        // Coloca o caractere atual de volta no fluxo de entrada
+        
         coluna_atual--;
+        // Atualiza a posição da coluna (decrementando)
+        
         if (char_atual == '\n') {
             linha_atual--;
+            // Se o caractere for uma quebra de linha, também decrementa o contador de linhas
         }
     }
 }
@@ -82,30 +93,44 @@ static void retroceder_char(void) {
 // Função para pular espaços em branco
 static void pular_espacos(void) {
     while (!fim_arquivo && isspace(char_atual)) {
+        // Avança enquanto o caractere atual for branco (espaço, tab, quebra de linha)
         proximo_char();
     }
 }
 
 // Função para pular comentários
-static bool pular_comentario(void) {
+static TInfoAtomo pular_comentario(void) {
+    TInfoAtomo info;
+    int linha_inicio = linha_atual;
+    
     if (char_atual == '{') {
+        // Consome o '{' inicial antes de entrar no loop de leitura do comentário
         proximo_char();
         while (!fim_arquivo && char_atual != '}') {
+            // Continua lendo até encontrar '}' ou atingir o fim do arquivo
             proximo_char();
         }
         if (fim_arquivo) {
-            return false; // Erro: comentário não fechado
+            // Erro: comentário não fechado
+            info.tipo = ATOM_ERRO;
+            info.linha = linha_inicio;
+            strcpy(info.lexema.string, "Comentário não fechado");
+            return info;
         }
-        proximo_char(); // Pula o '}'
-        return true;
+        // Garante que o '}' não seja processado posteriormente como símbolo avulso
+        proximo_char();
     }
-    return false;
+    
+    // Retorna um token especial indicando que processou comentário com sucesso
+    info.tipo = -1; // Valor especial para indicar sucesso
+    return info;
 }
 
 // Função para verificar se é palavra reservada
 static TipoAtomo verificar_palavra_reservada(const char *lexema) {
     for (int i = 0; palavras_reservadas[i].palavra != NULL; i++) {
         if (strcmp(lexema, palavras_reservadas[i].palavra) == 0) {
+            // Encontrou uma correspondência na tabela de palavras reservadas
             return palavras_reservadas[i].tipo;
         }
     }
@@ -130,8 +155,10 @@ static TInfoAtomo ler_identificador(void) {
     // Lê o identificador
     while (!fim_arquivo && (isalnum(char_atual) || char_atual == '_')) {
         if (pos < 255) {
+            // Armazena o caractere atual no buffer do lexema
             buffer[pos++] = char_atual;
         }
+        // Avança para o próximo caractere para continuar o identificador
         proximo_char();
     }
     buffer[pos] = '\0';
@@ -149,12 +176,14 @@ static TInfoAtomo ler_numero(void) {
     char buffer[256];
     int pos = 0;
     bool tem_ponto = false;
+    bool erro = false;
     
     info.linha = linha_atual;
     
     // Lê a parte inteira
     while (!fim_arquivo && isdigit(char_atual)) {
         if (pos < 255) {
+            // Captura cada dígito lido durante a fase inteira do número
             buffer[pos++] = char_atual;
         }
         proximo_char();
@@ -166,26 +195,36 @@ static TInfoAtomo ler_numero(void) {
         if (pos < 255) {
             buffer[pos++] = char_atual;
         }
+        // Avança para tentar ler a parte fracionária
         proximo_char();
         
         // Lê a parte decimal
         if (!isdigit(char_atual)) {
-            info.tipo = ATOM_ERRO;
-            strcpy(info.lexema.string, "Número float inválido");
-            return info;
-        }
-        
-        while (!fim_arquivo && isdigit(char_atual)) {
-            if (pos < 255) {
-                buffer[pos++] = char_atual;
+            // Erro: número float mal formado, mas continua processando
+            erro = true;
+            strcpy(info.lexema.string, "Número float mal formado - falta parte decimal");
+            
+            // Tenta recuperar: volta o ponto e trata como inteiro
+            retroceder_char();
+            pos--; // Remove o ponto do buffer
+            tem_ponto = false;
+        } else {
+            while (!fim_arquivo && isdigit(char_atual)) {
+                if (pos < 255) {
+                    // Continua acumulando os dígitos após o ponto
+                    buffer[pos++] = char_atual;
+                }
+                proximo_char();
             }
-            proximo_char();
         }
     }
     
     buffer[pos] = '\0';
     
-    if (tem_ponto) {
+    if (erro) {
+        info.tipo = ATOM_ERRO;
+        // O erro já foi definido acima
+    } else if (tem_ponto) {
         info.tipo = ATOM_NUMERO_FLOAT;
         info.lexema.valor_float = atof(buffer);
     } else {
@@ -201,35 +240,40 @@ static TInfoAtomo ler_string(void) {
     TInfoAtomo info;
     char buffer[256];
     int pos = 0;
+    int linha_inicio = linha_atual;
     
-    info.linha = linha_atual;
+    info.linha = linha_inicio;
     
-    proximo_char(); // Pula a aspa inicial
+    // Move para o primeiro caractere após a aspa de abertura
+    proximo_char();
     
-    while (!fim_arquivo && char_atual != '"') {
-        if (char_atual == '\n') {
-            info.tipo = ATOM_ERRO;
-            strcpy(info.lexema.string, "String não terminada");
-            return info;
-        }
-        
+    while (!fim_arquivo && char_atual != '"' && char_atual != '\n') {
         if (pos < 255) {
+            // Armazena o caractere literal da string
             buffer[pos++] = char_atual;
         }
+        // Continua a leitura até encontrar a aspa final ou erro
         proximo_char();
     }
     
-    if (fim_arquivo) {
-        info.tipo = ATOM_ERRO;
-        strcpy(info.lexema.string, "String não terminada");
-        return info;
-    }
-    
     buffer[pos] = '\0';
-    info.tipo = ATOM_STRING;
-    strcpy(info.lexema.string, buffer);
     
-    proximo_char(); // Pula a aspa final
+    if (fim_arquivo || char_atual == '\n') {
+        // Erro: string não terminada
+        info.tipo = ATOM_ERRO;
+        sprintf(info.lexema.string, "String não terminada (iniciada na linha %d)", linha_inicio);
+        
+        // Recuperação: continua na próxima linha se não chegou ao fim do arquivo
+        if (char_atual == '\n') {
+            proximo_char();
+        }
+    } else {
+        // String válida
+        info.tipo = ATOM_STRING;
+        strcpy(info.lexema.string, buffer);
+        // Consome a aspa final para prosseguir com a análise lexical
+        proximo_char();
+    }
     
     return info;
 }
@@ -237,31 +281,62 @@ static TInfoAtomo ler_string(void) {
 // Função para ler caractere
 static TInfoAtomo ler_caractere(void) {
     TInfoAtomo info;
+    char buffer[10];
+    int pos = 0;
     
     info.linha = linha_atual;
     
-    proximo_char(); // Pula a aspa simples inicial
+    // Avança para o conteúdo após a aspa simples de abertura
+    proximo_char();
     
     if (fim_arquivo || char_atual == '\'') {
         info.tipo = ATOM_ERRO;
         strcpy(info.lexema.string, "Caractere vazio");
+        if (char_atual == '\'') {
+            // Se a aspa de fechamento estiver presente, consome para evitar laço infinito
+            proximo_char();
+        }
         return info;
     }
     
-    char c = char_atual;
-    proximo_char();
+    // Lê caracteres até encontrar aspa ou fim
+    while (!fim_arquivo && char_atual != '\'' && char_atual != '\n' && pos < 9) {
+        buffer[pos++] = char_atual;
+        proximo_char();
+    }
+    buffer[pos] = '\0';
     
     if (char_atual != '\'') {
+        // Erro: caractere mal formado
         info.tipo = ATOM_ERRO;
-        strcpy(info.lexema.string, "Caractere inválido");
-        return info;
+        if (pos > 1) {
+            strcpy(info.lexema.string, "Constante caractere com mais de um caractere");
+        } else {
+            strcpy(info.lexema.string, "Caractere não terminado");
+        }
+        
+        // Recuperação: pula até encontrar aspa ou fim de linha
+        while (!fim_arquivo && char_atual != '\'' && char_atual != '\n' && 
+               char_atual != ';' && char_atual != ' ') {
+            proximo_char();
+        }
+        if (char_atual == '\'') {
+            proximo_char();
+        }
+    } else if (pos != 1) {
+        // Erro: mais de um caractere
+        info.tipo = ATOM_ERRO;
+        strcpy(info.lexema.string, "Constante caractere deve ter exatamente um caractere");
+        // Consome a aspa de fechamento mesmo em caso de erro para continuar análise
+        proximo_char();
+    } else {
+        // Caractere válido
+        info.tipo = ATOM_CHAR_CONST;
+        info.lexema.string[0] = buffer[0];
+        info.lexema.string[1] = '\0';
+        // Consome a aspa final para posicionar no próximo símbolo
+        proximo_char();
     }
-    
-    info.tipo = ATOM_CHAR_CONST;
-    info.lexema.string[0] = c;
-    info.lexema.string[1] = '\0';
-    
-    proximo_char(); // Pula a aspa simples final
     
     return info;
 }
@@ -274,13 +349,13 @@ TInfoAtomo obter_atomo(void) {
     while (!fim_arquivo) {
         pular_espacos();
         if (char_atual == '{') {
-            if (!pular_comentario()) {
-                info.tipo = ATOM_ERRO;
-                info.linha = linha_atual;
-                strcpy(info.lexema.string, "Comentário não fechado");
-                return info;
+            TInfoAtomo comentario_result = pular_comentario();
+            if (comentario_result.tipo == ATOM_ERRO) {
+                // Retorna o erro do comentário não fechado
+                return comentario_result;
             }
         } else {
+            // Sai do laço assim que encontrar um caractere relevante
             break;
         }
     }
@@ -398,8 +473,10 @@ TInfoAtomo obter_atomo(void) {
                 strcpy(info.lexema.string, "==");
                 proximo_char();
             } else {
+                // Erro: operador = sozinho não existe em LPD
                 info.tipo = ATOM_ERRO;
-                strcpy(info.lexema.string, "Operador = inválido");
+                strcpy(info.lexema.string, "Operador '=' inválido (use '==' para comparação ou '<-' para atribuição)");
+                // Não consome o próximo caractere para permitir sua análise
             }
             break;
             
@@ -410,8 +487,10 @@ TInfoAtomo obter_atomo(void) {
                 strcpy(info.lexema.string, "!=");
                 proximo_char();
             } else {
+                // Erro: operador ! sozinho não existe em LPD
                 info.tipo = ATOM_ERRO;
-                strcpy(info.lexema.string, "Operador ! inválido");
+                strcpy(info.lexema.string, "Operador '!' inválido (use '!=' para diferença ou 'not' para negação)");
+                // Não consome o próximo caractere para permitir sua análise
             }
             break;
             
@@ -425,12 +504,17 @@ TInfoAtomo obter_atomo(void) {
             
         default:
             if (isalpha(char_atual) || char_atual == '_') {
+                // Trata sequências iniciadas por letra ou '_' como identificadores/palavras reservadas
                 info = ler_identificador();
             } else if (isdigit(char_atual)) {
+                // Sequências numéricas são encaminhadas para o leitor de números
                 info = ler_numero();
             } else {
+                // Caractere inválido - registra erro e continua
                 info.tipo = ATOM_ERRO;
-                sprintf(info.lexema.string, "Caractere inválido: %c", char_atual);
+                sprintf(info.lexema.string, "Caractere inválido: '%c' (ASCII: %d)", 
+                        char_atual, (unsigned char)char_atual);
+                // Consome o símbolo inesperado para tentar recuperar a análise
                 proximo_char();
             }
             break;
@@ -445,15 +529,14 @@ void inicializar_analisador(FILE *arquivo) {
     linha_atual = 1;
     coluna_atual = 0;
     fim_arquivo = false;
-    proximo_char(); // Lê o primeiro caractere
+    // Faz a primeira leitura para preencher char_atual antes da análise começar
+    proximo_char();
 }
 
 // Função para finalizar o analisador
 void finalizar_analisador(void) {
-    if (arquivo_fonte != NULL) {
-        fclose(arquivo_fonte);
-        arquivo_fonte = NULL;
-    }
+    // Não fecha o arquivo aqui, pois pode ter sido passado de outro módulo
+    arquivo_fonte = NULL;
 }
 
 // Função auxiliar para obter o nome do átomo
