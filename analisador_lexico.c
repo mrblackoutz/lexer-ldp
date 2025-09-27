@@ -92,6 +92,7 @@ static void retroceder_char(void) {
 
 // Função para pular espaços em branco
 static void pular_espacos(void) {
+    // Mantém a leitura avançando enquanto estiver sobre caracteres de espaço em branco
     while (!fim_arquivo && isspace(char_atual)) {
         // Avança enquanto o caractere atual for branco (espaço, tab, quebra de linha)
         proximo_char();
@@ -102,6 +103,7 @@ static void pular_espacos(void) {
 static TInfoAtomo pular_comentario(void) {
     TInfoAtomo info;
     int linha_inicio = linha_atual;
+    // Armazena a linha de início para relatar erros em caso de comentário não fechado
     
     if (char_atual == '{') {
         // Consome o '{' inicial antes de entrar no loop de leitura do comentário
@@ -128,6 +130,7 @@ static TInfoAtomo pular_comentario(void) {
 
 // Função para verificar se é palavra reservada
 static TipoAtomo verificar_palavra_reservada(const char *lexema) {
+    // Percorre a tabela de palavras reservadas realizando comparação literal
     for (int i = 0; palavras_reservadas[i].palavra != NULL; i++) {
         if (strcmp(lexema, palavras_reservadas[i].palavra) == 0) {
             // Encontrou uma correspondência na tabela de palavras reservadas
@@ -161,6 +164,7 @@ static TInfoAtomo ler_identificador(void) {
         // Avança para o próximo caractere para continuar o identificador
         proximo_char();
     }
+    // Finaliza a string com terminador nulo para permitir uso em funções padrão
     buffer[pos] = '\0';
     
     // Verifica se é palavra reservada
@@ -226,9 +230,11 @@ static TInfoAtomo ler_numero(void) {
         // O erro já foi definido acima
     } else if (tem_ponto) {
         info.tipo = ATOM_NUMERO_FLOAT;
+        // Converte o lexema acumulado em ponto flutuante
         info.lexema.valor_float = atof(buffer);
     } else {
         info.tipo = ATOM_NUMERO_INT;
+        // Converte o lexema acumulado em inteiro decimal
         info.lexema.valor_int = atoi(buffer);
     }
     
@@ -332,6 +338,7 @@ static TInfoAtomo ler_caractere(void) {
     } else {
         // Caractere válido
         info.tipo = ATOM_CHAR_CONST;
+        // Registra o caractere único capturado garantindo terminação em '\0'
         info.lexema.string[0] = buffer[0];
         info.lexema.string[1] = '\0';
         // Consome a aspa final para posicionar no próximo símbolo
