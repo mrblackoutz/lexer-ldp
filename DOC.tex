@@ -1,0 +1,259 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\geometry{a4paper, margin=2.5cm}
+
+% Configuração para código fonte
+\lstset{
+    language=C,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green!60!black},
+    morecomment=[l][\color{magenta}]{\#},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=10pt,
+    backgroundcolor=\color{gray!10},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    tabsize=4,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false,
+    escapeinside={\%*}{*)},
+}
+
+\title{Analisador Léxico para a Linguagem LPD\\
+\large Compiladores - 2025}
+\author{Felipe Ujvari Gasparino de Sousa (RA 10418415)\\Gustavo Nascimento Siqueira (RA 10419057)}
+\date{Setembro 2025}
+
+\begin{document}
+\maketitle
+
+\section{Introdução}
+Este documento descreve a implementação de um analisador léxico para a Linguagem de Programação Didática (LPD), desenvolvido em C como parte do projeto de construção de um compilador. O analisador léxico é responsável por transformar um fluxo de caracteres de entrada em uma sequência de tokens tipados, realizando a primeira fase da análise de compilação.
+
+A implementação atende integralmente aos requisitos especificados, incluindo:
+\begin{itemize}[noitemsep]
+    \item Reconhecimento de todas as 22 palavras reservadas da linguagem
+    \item Identificação de literais (inteiros, reais, caracteres e strings mesmo que não seja um tipo primitivo da linguagem)
+    \item Processamento de operadores aritméticos, relacionais e lógicos
+    \item Tratamento de delimitadores e pontuação
+    \item Gestão de comentários delimitados por chaves
+    \item Sistema para detecção e recuperação de erros léxicos
+\end{itemize}
+
+\section{Arquitetura do Sistema}
+
+\subsection{Estrutura Modular}
+O analisador foi projetado seguindo princípios de modularização e encapsulamento:
+
+\begin{description}[leftmargin=!,labelwidth=4cm]
+    \item[\texttt{analisador\_lexico.h}] Interface pública do módulo, contendo:
+    \begin{itemize}[noitemsep]
+        \item Definição do enum \texttt{TipoAtomo} com 48 tipos de tokens
+        \item Union \texttt{ValorLexema} para armazenamento polimórfico de valores
+        \item Estrutura \texttt{TInfoAtomo} que encapsula tipo, valor e linha
+        \item Assinaturas das funções públicas da API
+    \end{itemize}
+    
+    \item[\texttt{analisador\_lexico.c}] Implementação do analisador:
+    \begin{itemize}[noitemsep]
+        \item Estado global mantido em variáveis estáticas
+        \item Funções auxiliares para navegação no arquivo fonte
+        \item Reconhecedores especializados para cada tipo de token
+        \item Implementação da função principal \texttt{obter\_atomo()}
+        \item Sistema de recuperação de erros
+    \end{itemize}
+
+    \item[\texttt{main.c}] Programa demonstrativo que utiliza o modulo analisador léxico:
+    \begin{itemize}[noitemsep]
+        \item Interface de linha de comando
+        \item Formatação tabular dos tokens reconhecidos
+        \item Relatório de erros com informações de diagnóstico
+        \item Estatísticas de análise
+    \end{itemize}
+\end{description}
+
+\subsection{Estruturas de Dados}
+
+\subsubsection{Enum TipoAtomo}
+Define 48 tipos distintos de tokens, organizados logicamente:
+\begin{itemize}[noitemsep]
+    \item \textbf{Palavras reservadas} (22): and, begin, char, else, end, float, for, if, int, not, or, prg, read, repeat, return, subrot, then, until, var, void, while, write
+    \item \textbf{Literais} (4): ATOM\_NUMERO\_INT, ATOM\_NUMERO\_FLOAT, ATOM\_CHAR\_CONST, ATOM\_STRING
+    \item \textbf{Operadores} (13): atribuição (<-), aritméticos (+, -, *, /), relacionais (==, !=, >, <, >=, <=), lógicos (representados como palavras reservadas)
+    \item \textbf{Delimitadores} (7): ; . , ( ) [ ]
+    \item \textbf{Especiais} (3): ATOM\_IDENTIFICADOR, ATOM\_EOF, ATOM\_ERRO
+\end{itemize}
+
+\subsubsection{Union ValorLexema}
+Estrutura de dados polimórfica capaz de armazenar:
+\begin{lstlisting}[language=C]
+typedef union {
+    char string[256];     // Identificadores, strings, mensagens
+    int valor_int;        // Numeros inteiros
+    float valor_float;    // Numeros reais
+} ValorLexema;
+\end{lstlisting}
+
+\section{Algoritmo de Análise Léxica}
+
+\subsection{Função Principal: obter\_atomo()}
+O algoritmo central segue o padrão de máquina de estados:
+
+\begin{enumerate}
+    \item \textbf{Pré-processamento}: Ignora espaços em branco e comentários
+    \item \textbf{Detecção de EOF}: Verifica fim de arquivo
+    \item \textbf{Classificação inicial}: Examina o caractere atual para determinar o tipo de token
+    \item \textbf{Reconhecimento especializado}: Delega para função apropriada baseada no tipo
+    \item \textbf{Construção do token}: Monta a estrutura TInfoAtomo com tipo, valor e linha
+    \item \textbf{Avanço do cursor}: Posiciona para o próximo token
+\end{enumerate}
+
+\subsection{Reconhecedores Especializados}
+
+\subsubsection{Identificadores e Palavras Reservadas}
+A função \texttt{ler\_identificador()} implementa:
+\begin{itemize}[noitemsep]
+    \item Validação do primeiro caractere (letra ou underscore)
+    \item Leitura de caracteres subsequentes (alfanuméricos ou underscore)
+    \item Consulta à tabela de palavras reservadas
+    \item Classificação como palavra reservada ou identificador genérico
+\end{itemize}
+
+\subsubsection{Números}
+A função \texttt{ler\_numero()} distingue inteiros de reais:
+\begin{itemize}[noitemsep]
+    \item Leitura da parte inteira (sequência de dígitos)
+    \item Detecção opcional de ponto decimal
+    \item Validação e leitura da parte fracionária
+    \item Tratamento de erro para formatos inválidos (ex: "3.")
+    \item Conversão apropriada (atoi/atof)
+\end{itemize}
+
+\subsubsection{Strings e Caracteres}
+Implementações com validação rigorosa:
+\begin{itemize}[noitemsep]
+    \item \texttt{ler\_string()}: Reconhece sequências de caracteres entre aspas duplas (embora string não seja um tipo primitivo da linguagem)
+    \item \texttt{ler\_caractere()}: Exige exatamente um caractere entre aspas simples, conforme definido no tipo primitivo char
+    \item Detecção de strings/caracteres não terminados
+    \item Validação de caracteres vazios ou múltiplos
+\end{itemize}
+
+\section{Sistema de Tratamento de Erros}
+
+\subsection{Filosofia de Recuperação}
+O analisador implementa uma estratégia de recuperação que permite continuar a análise após encontrar erros, maximizando a detecção de problemas em uma única passada.
+
+\subsection{Tipos de Erros Detectados}
+\begin{enumerate}
+    \item \textbf{Caracteres inválidos}: Símbolos não reconhecidos pela linguagem (ex: @, \#, \$)
+    \item \textbf{Strings mal formadas}: Não terminadas ou com quebra de linha
+    \item \textbf{Caracteres mal formados}: Vazios ('') ou múltiplos ('abc')
+    \item \textbf{Números inválidos}: Floats sem parte decimal (3.)
+    \item \textbf{Operadores inválidos}: = ou ! isolados
+    \item \textbf{Comentários não fechados}: \{ sem \} correspondente
+\end{enumerate}
+
+\subsection{Estratégias de Recuperação}
+\begin{itemize}[noitemsep]
+    \item \textbf{Caracteres inválidos}: Consome o caractere e continua
+    \item \textbf{Strings não terminadas}: Avança até próxima linha
+    \item \textbf{Números mal formados}: Tenta interpretar como inteiro
+    \item \textbf{Operadores inválidos}: Fornece sugestão de correção
+\end{itemize}
+
+\section{Resultados e Testes}
+
+\subsection{Casos de Teste}
+Foram desenvolvidos quatro arquivos de teste principais:
+
+\begin{description}[leftmargin=!,labelwidth=3.5cm]
+    \item[\texttt{teste\_correto.lpd}] Programa válido com 374 tokens, demonstrando todas as funcionalidades da linguagem sem erros
+    \item[\texttt{teste\_linguagem.lpd}] Programa extenso com 567 tokens, testando construções complexas
+    \item[\texttt{teste\_com\_erros.lpd}] Arquivo com 15 erros intencionais para validar o sistema de recuperação
+    \item[\texttt{teste\_completo.lpd}] Programa híbrido simulando desenvolvimento real, com 328 tokens e 6 erros léxicos intencionais, incluindo caracteres inválidos, operadores incorretos, strings não terminadas e comentários não fechados
+\end{description}
+
+\subsection{Estatísticas de Desempenho}
+O analisador demonstrou:
+\begin{itemize}[noitemsep]
+    \item Taxa de reconhecimento: 100\% dos tokens válidos
+    \item Recuperação de erros: Continua análise após todos os tipos de erro
+    \item Precisão de diagnóstico: Mensagens claras e informativas
+    \item Eficiência: Análise em passada única sobre o arquivo
+\end{itemize}
+
+\subsubsection{Resumo dos Testes}
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Arquivo} & \textbf{Tokens} & \textbf{Erros} & \textbf{Recuperação} \\
+\hline
+teste\_correto.lpd & 374 & 0 & -- \\
+teste\_linguagem.lpd & 567 & 0 & -- \\
+teste\_com\_erros.lpd & 138 & 15 & 100\% \\
+teste\_completo.lpd & 328 & 6 & 100\% \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Interface de Saída}
+
+\subsection{Formato Tabular}
+O programa de teste produz saída formatada com quatro colunas:
+\begin{itemize}[noitemsep]
+    \item \textbf{Linha}: Número da linha no arquivo fonte
+    \item \textbf{Token}: Nome do tipo de token reconhecido
+    \item \textbf{Status}: "OK" para tokens válidos, "*** ERRO ***" para erros
+    \item \textbf{Valor/Descrição}: Conteúdo do lexema ou mensagem de erro
+\end{itemize}
+
+\subsection{Relatório de Resumo}
+Ao final da análise, apresenta:
+\begin{itemize}[noitemsep]
+    \item Total de tokens processados
+    \item Quantidade de erros encontrados
+    \item Mensagem de status (sucesso ou alerta de erros)
+\end{itemize}
+
+\section{Compilação e Execução}
+
+\subsection{Compilação}
+\begin{lstlisting}[language=bash]
+gcc -Wall -Wextra -g analisador_lexico.c main.c -o analisador_lpd
+\end{lstlisting}
+
+\subsection{Execução}
+\begin{lstlisting}[language=bash]
+./analisador_lpd arquivo_fonte.lpd
+\end{lstlisting}
+
+\section{Conclusões}
+
+O analisador léxico desenvolvido atende plenamente aos requisitos especificados:
+
+\begin{itemize}[noitemsep]
+    \item Implementa a interface \texttt{obter\_atomo()} conforme especificação
+    \item Reconhece todos os tokens da linguagem LPD
+    \item Fornece diagnósticos precisos de erros léxicos
+    \item Implementa recuperação de erros para análise completa
+    \item Mantém informação de linha para integração com fases posteriores
+\end{itemize}
+
+A arquitetura modular e o sistema de recuperação de erros tornam o analisador robusto e adequado para integração com as próximas fases do compilador.
+
+\end{document}

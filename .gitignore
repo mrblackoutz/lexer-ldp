@@ -1,6 +1,7 @@
 #documentacao
 DOC.*
-DOC.!tex
+!DOC.tex
+
 
 # Prerequisites
 *.d
